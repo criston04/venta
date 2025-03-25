@@ -6,9 +6,11 @@ import AuthGuard from "@/components/AuthGuard";
 export default function DashboardLayout({ children }) {
   return (
     <AuthGuard>
-      <div className="flex min-h-screen bg-gradient-to-r from-gray-100 to-gray-200">
+      <div className="flex min-h-screen bg-gray-100">
+        {/* Sidebar */}
         <Sidebar />
-        <main className="flex-1 p-8">{children}</main>
+        {/* Contenido principal ajustable */}
+        <main className="flex-1 p-8 overflow-auto">{children}</main>
       </div>
     </AuthGuard>
   );

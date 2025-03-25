@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "../../firebase";
-import { getUserData } from "@/services/firebaseService";
+import { getUserDataWithRole } from "@/services/firebaseService";
 
 export default function AuthGuard({ children, requiredRole }) {
   const [user, setUser] = useState(null);
@@ -18,14 +18,11 @@ export default function AuthGuard({ children, requiredRole }) {
         router.replace("/login");
       } else {
         try {
-          const userData = await getUserData();
+          const userData = await getUserDataWithRole(requiredRole);
           setUser(userData);
-          if (requiredRole && userData.role !== requiredRole) {
-            router.replace("/unauthorized");
-          }
         } catch (error) {
-          console.error("Error al obtener datos del usuario:", error);
-          router.replace("/login");
+          console.error("Error al validar rol:", error);
+          router.replace("/unauthorized");
         }
       }
       setIsLoading(false);

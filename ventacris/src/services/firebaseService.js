@@ -54,6 +54,30 @@ export const getUserData = async () => {
   return cachedUserData;
 };
 
+// Obtener datos del usuario autenticado con validación de roles
+export const getUserDataWithRole = async (requiredRole) => {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Usuario no autenticado");
+
+  const userDoc = await getDoc(doc(db, "users", user.uid));
+  if (!userDoc.exists()) throw new Error("Datos del usuario no encontrados");
+
+  const userData = userDoc.data();
+  if (requiredRole && userData.role !== requiredRole) {
+    throw new Error("Acceso denegado: rol insuficiente");
+  }
+
+  return userData;
+};
+
+// Actualizar datos del usuario
+export const updateUserData = async (updatedData) => {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Usuario no autenticado");
+
+  return await updateDoc(doc(db, "users", user.uid), updatedData);
+};
+
 // Sales Service
 export const addSale = async (saleData) => {
   const user = auth.currentUser;
@@ -121,4 +145,19 @@ export const addSupplier = async (supplierData) => {
 
 export const deleteSupplier = async (supplierId) => {
   return await deleteDoc(doc(db, "suppliers", supplierId));
+};
+
+// Invoices Service
+export const addInvoice = async (invoiceData) => {
+  return await addDoc(collection(db, "invoices"), invoiceData);
+};
+
+export const getInvoices = async () => {
+  const invoicesQuery = collection(db, "invoices");
+  const querySnapshot = await getDocs(invoicesQuery);
+  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+export const deleteInvoice = async (invoiceId) => {
+  return await deleteDoc(doc(db, "invoices", invoiceId));
 };
