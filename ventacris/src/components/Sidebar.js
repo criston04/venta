@@ -97,6 +97,14 @@ export default function Sidebar() {
           { label: "Reporte de Inventario", href: "/dashboard/reports/inventory" },
         ],
       },
+      {
+        label: "Proveedores",
+        icon: menuIcons["Inventario"],
+        subItems: [
+          { label: "Lista de Proveedores", href: "/dashboard/inventory/suppliers" },
+          { label: "Consulta por RUC", href: "/dashboard/suppliers/ruc" }, // Nueva opción
+        ],
+      },
     ],
     []
   );

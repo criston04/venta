@@ -10,6 +10,9 @@ export default function SalesHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ date: "", customer: "", product: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Número de elementos por página
+  const [sortConfig, setSortConfig] = useState({ key: "", direction: "" });
 
   useEffect(() => {
     const fetchSales = async () => {
@@ -61,6 +64,7 @@ export default function SalesHistory() {
     });
 
     setFilteredSales(filtered);
+    setCurrentPage(1); // Reiniciar a la primera página
   };
 
   const exportToExcel = () => {
@@ -83,10 +87,33 @@ export default function SalesHistory() {
     XLSX.writeFile(workbook, "historial_ventas.xlsx");
   };
 
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+
+    const sortedSales = [...filteredSales].sort((a, b) => {
+      if (a[key] < b[key]) return direction === "asc" ? -1 : 1;
+      if (a[key] > b[key]) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    setFilteredSales(sortedSales);
+  };
+
+  const paginatedSales = filteredSales.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md text-black">
       <h1 className="text-3xl font-bold mb-6">Historial de Ventas</h1>
-      <div className="mb-4 flex gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <input
           type="date"
           name="date"
@@ -125,41 +152,85 @@ export default function SalesHistory() {
         ) : filteredSales.length === 0 ? (
           <p className="text-gray-600">No se encontraron ventas registradas.</p>
         ) : (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="border p-3 text-left">Cliente</th>
-                <th className="border p-3 text-left">Producto</th>
-                <th className="border p-3 text-left">Cantidad</th>
-                <th className="border p-3 text-left">Precio Unitario</th>
-                <th className="border p-3 text-left">Total</th>
-                <th className="border p-3 text-left">Fecha</th>
-                <th className="border p-3 text-left">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSales.map((sale) => (
-                <tr key={sale.id} className="hover:bg-gray-100">
-                  <td className="border p-3">{sale.customerName}</td>
-                  <td className="border p-3">{sale.product}</td>
-                  <td className="border p-3">{sale.quantity}</td>
-                  <td className="border p-3">${sale.price.toFixed(2)}</td>
-                  <td className="border p-3">${sale.total.toFixed(2)}</td>
-                  <td className="border p-3">
-                    {new Date(sale.date).toLocaleDateString()}
-                  </td>
-                  <td className="border p-3 flex gap-2">
-                    <button
-                      onClick={() => handleDelete(sale.id)}
-                      className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
+          <>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th
+                    className="border p-3 text-left cursor-pointer"
+                    onClick={() => handleSort("customerName")}
+                  >
+                    Cliente
+                  </th>
+                  <th
+                    className="border p-3 text-left cursor-pointer"
+                    onClick={() => handleSort("product")}
+                  >
+                    Producto
+                  </th>
+                  <th
+                    className="border p-3 text-left cursor-pointer"
+                    onClick={() => handleSort("quantity")}
+                  >
+                    Cantidad
+                  </th>
+                  <th
+                    className="border p-3 text-left cursor-pointer"
+                    onClick={() => handleSort("total")}
+                  >
+                    Total
+                  </th>
+                  <th
+                    className="border p-3 text-left cursor-pointer"
+                    onClick={() => handleSort("date")}
+                  >
+                    Fecha
+                  </th>
+                  <th className="border p-3 text-left">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedSales.map((sale) => (
+                  <tr key={sale.id} className="hover:bg-gray-100">
+                    <td className="border p-3">{sale.customerName}</td>
+                    <td className="border p-3">{sale.product}</td>
+                    <td className="border p-3">{sale.quantity}</td>
+                    <td className="border p-3">${sale.total.toFixed(2)}</td>
+                    <td className="border p-3">
+                      {new Date(sale.date).toLocaleDateString()}
+                    </td>
+                    <td className="border p-3 flex gap-2">
+                      <button
+                        onClick={() => handleDelete(sale.id)}
+                        className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="flex justify-between items-center mt-4">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+              <p>
+                Página {currentPage} de {totalPages}
+              </p>
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
