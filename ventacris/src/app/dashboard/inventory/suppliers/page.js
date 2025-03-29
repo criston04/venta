@@ -91,31 +91,22 @@ export default function Suppliers() {
         ) : suppliers.length === 0 ? (
           <p className="text-gray-600">No se encontraron proveedores.</p>
         ) : (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="border p-3 text-left">Nombre</th>
-                <th className="border p-3 text-left">Contacto</th>
-                <th className="border p-3 text-left">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {suppliers.map((supplier) => (
-                <tr key={supplier.id} className="hover:bg-gray-100">
-                  <td className="border p-3">{supplier.name}</td>
-                  <td className="border p-3">{supplier.contact}</td>
-                  <td className="border p-3 flex gap-2">
-                    <button
-                      onClick={() => handleDeleteSupplier(supplier.id)}
-                      className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {suppliers.map((supplier) => (
+              <div key={supplier.id} className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-lg font-bold">{supplier.name}</h3>
+                <p className="text-gray-600">Contacto: {supplier.contact}</p>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => handleDeleteSupplier(supplier.id)}
+                    className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

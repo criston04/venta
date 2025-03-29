@@ -2,6 +2,7 @@
 
 import { Geist, Geist_Mono } from "next/font/google";
 import LoadingIndicator from "@/components/LoadingIndicator";
+import NotificationProvider from "@/components/NotificationProvider"; // Importar NotificationProvider
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,8 +21,10 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <LoadingIndicator />
-        <div className="min-h-screen">{children}</div>
+        <NotificationProvider>
+          <LoadingIndicator />
+          <div className="min-h-screen">{children}</div>
+        </NotificationProvider>
       </body>
     </html>
   );
