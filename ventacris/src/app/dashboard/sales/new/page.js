@@ -11,9 +11,12 @@ export default function NewSale() {
   const [customerName, setCustomerName] = useState("");
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [productSearch, setProductSearch] = useState("");
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("Efectivo");
+  const [amountGiven, setAmountGiven] = useState(0); // Nuevo estado para el monto entregado
+  const [change, setChange] = useState(0); // Nuevo estado para el vuelto
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -42,9 +45,8 @@ export default function NewSale() {
       setError("");
       const person = await getPersonByDNI(dni);
       setCustomerName(`${person.nombres} ${person.apellidoPaterno} ${person.apellidoMaterno}`);
-      setRuc(""); // Limpiar el campo RUC si se usa DNI
+      setRuc("");
 
-      // Cargar historial de ventas del cliente
       const sales = await getSales();
       const customerSales = sales.filter((sale) => sale.customerName === `${person.nombres} ${person.apellidoPaterno} ${person.apellidoMaterno}`);
       setCustomerSales(customerSales);
@@ -63,13 +65,14 @@ export default function NewSale() {
       setError("");
       const company = await getCompanyByRUC(ruc);
       setCustomerName(company.razonSocial);
-      setDni(""); // Limpiar el campo DNI si se usa RUC
+      setDni("");
     } catch (error) {
       setError("No se pudo obtener la información del RUC.");
     }
   };
 
   const handleProductSearch = (query) => {
+    setProductSearch(query);
     if (!query) {
       setFilteredProducts([]);
       return;
@@ -83,7 +86,8 @@ export default function NewSale() {
 
   const handleAddProduct = (product) => {
     setSelectedProducts([...selectedProducts, { ...product, quantity: 1 }]);
-    setFilteredProducts([]); // Limpiar las sugerencias después de seleccionar un producto
+    setFilteredProducts([]);
+    setProductSearch("");
   };
 
   const handleRemoveProduct = (index) => {
@@ -92,7 +96,7 @@ export default function NewSale() {
 
   const handleQuantityChange = (index, quantity) => {
     const updatedProducts = [...selectedProducts];
-    updatedProducts[index].quantity = parseInt(quantity) || 1; // Asegurar que sea un número válido
+    updatedProducts[index].quantity = parseInt(quantity) || 1;
     setSelectedProducts(updatedProducts);
   };
 
@@ -101,7 +105,14 @@ export default function NewSale() {
       (total, product) => total + product.price * product.quantity,
       0
     );
-    return (subtotal - (parseFloat(discount) || 0)).toFixed(2); // Asegurar que el descuento sea un número válido
+    return (subtotal - (parseFloat(discount) || 0)).toFixed(2);
+  };
+
+  const handleAmountGivenChange = (value) => {
+    setAmountGiven(value);
+    const total = parseFloat(calculateTotal());
+    const change = value - total;
+    setChange(change >= 0 ? change.toFixed(2) : 0);
   };
 
   const handleSubmit = async (e) => {
@@ -119,9 +130,11 @@ export default function NewSale() {
       await addSale({
         customerName,
         products: selectedProducts,
-        discount: parseFloat(discount) || 0, // Asegurar que sea un número válido
+        discount: parseFloat(discount) || 0,
         paymentMethod,
         total: calculateTotal(),
+        amountGiven: paymentMethod === "Efectivo" ? parseFloat(amountGiven) : null,
+        change: paymentMethod === "Efectivo" ? parseFloat(change) : null,
         date: new Date().toISOString(),
       });
 
@@ -132,6 +145,8 @@ export default function NewSale() {
       setSelectedProducts([]);
       setDiscount(0);
       setPaymentMethod("Efectivo");
+      setAmountGiven(0);
+      setChange(0);
     } catch (error) {
       console.error("Error al registrar la venta:", error);
     } finally {
@@ -146,10 +161,18 @@ export default function NewSale() {
     doc.text(`Método de Pago: ${paymentMethod}`, 10, 30);
     doc.text("Productos:", 10, 40);
     selectedProducts.forEach((product, index) => {
-      doc.text(`${index + 1}. ${product.name} - ${product.quantity} x $${product.price}`, 10, 50 + index * 10);
+      doc.text(
+        `${index + 1}. ${product.name} - ${product.quantity} x $${product.price}`,
+        10,
+        50 + index * 10
+      );
     });
     doc.text(`Descuento: $${parseFloat(discount) || 0}`, 10, 60 + selectedProducts.length * 10);
     doc.text(`Total: $${calculateTotal()}`, 10, 70 + selectedProducts.length * 10);
+    if (paymentMethod === "Efectivo") {
+      doc.text(`Monto Entregado: $${parseFloat(amountGiven) || 0}`, 10, 80 + selectedProducts.length * 10);
+      doc.text(`Vuelto: $${parseFloat(change) || 0}`, 10, 90 + selectedProducts.length * 10);
+    }
     doc.save("recibo.pdf");
   };
 
@@ -163,7 +186,6 @@ export default function NewSale() {
         <p className="text-red-500 mb-4">{error}</p>
       )}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
-        {/* Datos del Cliente */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-gray-700 font-semibold mb-2">
@@ -221,7 +243,6 @@ export default function NewSale() {
           />
         </div>
 
-        {/* Productos */}
         <div className="mb-4">
           <label className="block text-gray-700 font-semibold mb-2">
             Productos
@@ -229,6 +250,7 @@ export default function NewSale() {
           <input
             type="text"
             placeholder="Buscar producto..."
+            value={productSearch}
             onChange={(e) => handleProductSearch(e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg"
           />
@@ -269,7 +291,6 @@ export default function NewSale() {
           ))}
         </div>
 
-        {/* Detalles de la Venta */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-gray-700 font-semibold mb-2">
@@ -298,11 +319,25 @@ export default function NewSale() {
             </select>
           </div>
         </div>
+        {paymentMethod === "Efectivo" && (
+          <div className="mb-4">
+            <label className="block text-gray-700 font-semibold mb-2">
+              Monto Entregado
+            </label>
+            <input
+              type="number"
+              value={amountGiven}
+              onChange={(e) => handleAmountGivenChange(parseFloat(e.target.value) || 0)}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              step="0.01"
+            />
+            <h2 className="text-lg font-bold mt-2">Vuelto: ${change}</h2>
+          </div>
+        )}
         <div className="mb-4">
           <h2 className="text-lg font-bold">Total: ${calculateTotal()}</h2>
         </div>
 
-        {/* Acciones */}
         <div className="flex gap-4">
           <button
             type="submit"
