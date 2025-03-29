@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getSales, deleteSale } from "@/services/firebaseService";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
 
 export default function SalesHistory() {
   const [sales, setSales] = useState([]);
@@ -13,6 +14,9 @@ export default function SalesHistory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10); // Número de elementos por página
   const [sortConfig, setSortConfig] = useState({ key: "", direction: "" });
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const [showModal, setShowModal] = useState(false); // Estado para mostrar/ocultar el modal
 
   useEffect(() => {
     const fetchSales = async () => {
@@ -74,8 +78,8 @@ export default function SalesHistory() {
         sale.customerName,
         sale.product,
         sale.quantity,
-        sale.price.toFixed(2),
-        sale.total.toFixed(2),
+        sale.price?.toFixed(2) || "0.00",
+        sale.total ? parseFloat(sale.total).toFixed(2) : "0.00", // Asegurar que sea un número
         new Date(sale.date).toLocaleDateString(),
       ]),
     ];
@@ -101,6 +105,16 @@ export default function SalesHistory() {
     });
 
     setFilteredSales(sortedSales);
+  };
+
+  const handleViewDetails = (sale) => {
+    setSelectedSale(sale);
+    setShowModal(true); // Mostrar el modal
+  };
+
+  const closeModal = () => {
+    setSelectedSale(null);
+    setShowModal(false); // Ocultar el modal
   };
 
   const paginatedSales = filteredSales.slice(
@@ -149,7 +163,7 @@ export default function SalesHistory() {
           <p className="text-gray-600">Cargando ventas...</p>
         ) : error ? (
           <p className="text-red-500">{error}</p>
-        ) : filteredSales.length === 0 ? (
+        ) : !Array.isArray(filteredSales) || filteredSales.length === 0 ? ( // Validación adicional
           <p className="text-gray-600">No se encontraron ventas registradas.</p>
         ) : (
           <>
@@ -190,25 +204,34 @@ export default function SalesHistory() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-gray-100">
-                    <td className="border p-3">{sale.customerName}</td>
-                    <td className="border p-3">{sale.product}</td>
-                    <td className="border p-3">{sale.quantity}</td>
-                    <td className="border p-3">${sale.total.toFixed(2)}</td>
-                    <td className="border p-3">
-                      {new Date(sale.date).toLocaleDateString()}
-                    </td>
-                    <td className="border p-3 flex gap-2">
-                      <button
-                        onClick={() => handleDelete(sale.id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition"
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {Array.isArray(filteredSales) &&
+                  filteredSales.map((sale) => (
+                    <tr key={sale.id} className="hover:bg-gray-100">
+                      <td className="border p-3">{sale.customerName}</td>
+                      <td className="border p-3">{sale.product}</td>
+                      <td className="border p-3">{sale.quantity}</td>
+                      <td className="border p-3">
+                        ${sale.total ? parseFloat(sale.total).toFixed(2) : "0.00"}
+                      </td>
+                      <td className="border p-3">
+                        {new Date(sale.date).toLocaleDateString()}
+                      </td>
+                      <td className="border p-3 flex gap-2">
+                        <button
+                          onClick={() => handleDelete(sale.id)}
+                          className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition"
+                        >
+                          Eliminar
+                        </button>
+                        <button
+                          onClick={() => handleViewDetails(sale)}
+                          className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition"
+                        >
+                          Ver Detalles
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
             <div className="flex justify-between items-center mt-4">
@@ -233,6 +256,34 @@ export default function SalesHistory() {
           </>
         )}
       </div>
+
+      {/* Modal para mostrar los detalles de la venta */}
+      {showModal && selectedSale && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 max-w-3xl">
+            <h2 className="text-2xl font-bold mb-4">Detalles de la Venta</h2>
+            <p><strong>Cliente:</strong> {selectedSale.customerName}</p>
+            <p><strong>Fecha:</strong> {new Date(selectedSale.date).toLocaleDateString()}</p>
+            <p><strong>Total:</strong> ${selectedSale.total ? parseFloat(selectedSale.total).toFixed(2) : "0.00"}</p>
+            <h3 className="text-lg font-bold mt-4 mb-2">Productos:</h3>
+            <ul className="list-disc pl-6">
+              {selectedSale.products.map((product, index) => (
+                <li key={index}>
+                  {product.name} - {product.quantity} x ${product.price ? parseFloat(product.price).toFixed(2) : "0.00"}
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end gap-4 mt-6">
+              <button
+                onClick={closeModal}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
